@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "リンク抽出＆ダウンロードツール",
+  "version": "1.0",
+  "description": "現在のページのリンクを表示し、拡張子でフィルターできます。",
+  "permissions": [
+    "scripting",
+    "activeTab",
+    "downloads"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
+}
