@@ -3,6 +3,7 @@ const linkList = document.getElementById('link-list');
 const countDisplay = document.getElementById('count');
 const downloadAllBtn = document.getElementById('download-all');
 const multiTabCheckbox = document.getElementById('multi-tab-mode');
+const excludeDuplicatesCheckbox = document.getElementById('exclude-duplicates');
 
 let allLinks = [];
 const downloadQueue = [];
@@ -54,11 +55,21 @@ const getLinks = (multiTab = false) => {
 
 const applyFilter = () => {
   const keyword = filterInput.value.trim().toLowerCase();
-  if (!keyword) {
-    showLinks(allLinks);
-    return;
+  const excludeDuplicates = excludeDuplicatesCheckbox.checked;
+
+  let filtered = !keyword
+    ? allLinks
+    : allLinks.filter(link => link.toLowerCase().includes(keyword));
+
+  if (excludeDuplicates) {
+    const seen = new Set();
+    filtered = filtered.filter(link => {
+      if (seen.has(link)) return false;
+      seen.add(link);
+      return true;
+    });
   }
-  const filtered = allLinks.filter(link => link.toLowerCase().includes(keyword));
+
   showLinks(filtered);
 };
 
@@ -96,19 +107,20 @@ const showLinks = (links) => {
 
 filterInput.addEventListener('input', applyFilter);
 multiTabCheckbox.addEventListener('change', init);
+excludeDuplicatesCheckbox.addEventListener('change', applyFilter);
 
 const startNextDownload = () => {
-  while (activeDownloads < MAX_CONCURRENT && downloadQueue.length > 0) {
-    const url = downloadQueue.shift();
-    activeDownloads++;
+  if (activeDownloads >= MAX_CONCURRENT || downloadQueue.length === 0) return;
 
-    chrome.downloads.download({ url }, () => {
-      activeDownloads--;
-      setTimeout(() => {
-        startNextDownload();
-      }, 1000);
-    });
-  }
+  const url = downloadQueue.shift();
+  activeDownloads++;
+
+  chrome.downloads.download({ url }, () => {
+    activeDownloads--;
+    setTimeout(() => {
+      startNextDownload();
+    }, 1500);
+  });
 };
 
 downloadAllBtn.addEventListener('click', () => {
@@ -116,9 +128,20 @@ downloadAllBtn.addEventListener('click', () => {
   downloadQueue.length = 0;
 
   const keyword = filterInput.value.trim().toLowerCase();
-  const filtered = !keyword
+  const excludeDuplicates = excludeDuplicatesCheckbox.checked;
+
+  let filtered = !keyword
     ? allLinks
     : allLinks.filter(link => link.toLowerCase().includes(keyword));
+
+  if (excludeDuplicates) {
+    const seen = new Set();
+    filtered = filtered.filter(link => {
+      if (seen.has(link)) return false;
+      seen.add(link);
+      return true;
+    });
+  }
 
   if (filtered.length === 0) {
     alert('ダウンロード可能なリンクがありません。');
